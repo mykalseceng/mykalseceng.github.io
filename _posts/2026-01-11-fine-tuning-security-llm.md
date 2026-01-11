@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Fine-Tuning a Security Vulnerability Analysis LLM: A Complete Guide"
-date: 2025-12-24
+date: 2026-01-11
 categories: [ai, security, machine-learning]
 tags: [llm, fine-tuning, qlora, ollama, hackerone]
 description: "How I built it, why it failed, and what the data taught me"
