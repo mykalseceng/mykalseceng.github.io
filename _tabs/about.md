@@ -4,5 +4,4 @@ icon: fas fa-info-circle
 order: 4
 ---
 
-> Add Markdown syntax content to file `_tabs/about.md`{: .filepath } and it will show up on this page.
-{: .prompt-tip }
+This is my personal blog and everything here reflects my own views. I'm using it to chronicle my AI journey—from understanding how the underlying pieces work, to building and coding with agentic tools and sharing what I learn along the way.
