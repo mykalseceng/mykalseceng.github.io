@@ -1,0 +1,377 @@
+<!doctype html><html lang="en" ><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f7f7"><meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b1b1e"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="viewport" content="width=device-width, user-scalable=no initial-scale=1, shrink-to-fit=no, viewport-fit=cover" ><meta name="generator" content="Jekyll v4.4.1" /><meta property="og:title" content="Back to XPC: Mapping Tahoe’s Service Surface" /><meta property="og:locale" content="en" /><meta name="description" content="Coming back to macOS XPC research after a long detour — setting up a Tahoe lab, enumerating the service surface, recovering selectors with disarm, and calling them from a host harness" /><meta name="twitter:description" property="og:description" content="Coming back to macOS XPC research after a long detour — setting up a Tahoe lab, enumerating the service surface, recovering selectors with disarm, and calling them from a host harness" /><link rel="canonical" href="https://mykalseceng.github.io/posts/back-to-xpc-mapping-tahoe/" /><meta property="og:url" content="https://mykalseceng.github.io/posts/back-to-xpc-mapping-tahoe/" /><meta property="og:site_name" content="Dark Knight Blog" /><meta property="og:type" content="article" /><meta property="article:published_time" content="2026-05-11T12:00:00+00:00" /><meta property="article:modified_time" content="2026-05-12T05:44:41+00:00" /><meta name="twitter:card" content="summary" /><meta name="twitter:title" content="Back to XPC: Mapping Tahoe’s Service Surface" /><meta name="twitter:site" content="@_Dark_Knight_" /> <script type="application/ld+json"> {"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2026-05-12T05:44:41+00:00","datePublished":"2026-05-11T12:00:00+00:00","description":"Coming back to macOS XPC research after a long detour — setting up a Tahoe lab, enumerating the service surface, recovering selectors with disarm, and calling them from a host harness","headline":"Back to XPC: Mapping Tahoe’s Service Surface","mainEntityOfPage":{"@type":"WebPage","@id":"https://mykalseceng.github.io/posts/back-to-xpc-mapping-tahoe/"},"url":"https://mykalseceng.github.io/posts/back-to-xpc-mapping-tahoe/"}</script><title>Back to XPC: Mapping Tahoe's Service Surface | Dark Knight Blog</title><link rel="icon" type="image/png" href="/assets/img/tdkb-favicons/favicon-96x96.png" sizes="96x96"><link rel="shortcut icon" type="image/png" href="/assets/img/tdkb-favicons/favicon-96x96.png"><link rel="apple-touch-icon" sizes="180x180" href="/assets/img/tdkb-favicons/apple-touch-icon.png"><link rel="manifest" href="/assets/img/tdkb-favicons/site.webmanifest"><link rel="preconnect" href="https://fonts.googleapis.com" ><link rel="dns-prefetch" href="https://fonts.googleapis.com" ><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="dns-prefetch" href="https://fonts.gstatic.com" ><link rel="preconnect" href="https://cdn.jsdelivr.net" ><link rel="dns-prefetch" href="https://cdn.jsdelivr.net" ><link rel="stylesheet" href="/assets/css/jekyll-theme-chirpy.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Source+Sans+Pro:wght@400;600;700;900&display=swap"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tocbot@4.36.4/dist/tocbot.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/loading-attribute-polyfill@2.1.1/dist/loading-attribute-polyfill.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox@3.3.0/dist/css/glightbox.min.css"> <script src="/assets/js/dist/theme.min.js"></script> <script defer src="https://cdn.jsdelivr.net/combine/npm/simple-jekyll-search@1.10.0/dest/simple-jekyll-search.min.js,npm/loading-attribute-polyfill@2.1.1/dist/loading-attribute-polyfill.umd.min.js,npm/glightbox@3.3.0/dist/js/glightbox.min.js,npm/clipboard@2.0.11/dist/clipboard.min.js,npm/dayjs@1.11.20/dayjs.min.js,npm/dayjs@1.11.20/locale/en.js,npm/dayjs@1.11.20/plugin/relativeTime.js,npm/dayjs@1.11.20/plugin/localizedFormat.js,npm/tocbot@4.36.4/dist/tocbot.min.js"></script> <script defer src="/assets/js/dist/post.min.js"></script> <script defer src="/app.min.js?baseurl=&register=true" ></script> <script async src="https://gc.zgo.at/count.js" data-goatcounter="https://mykalseceng.goatcounter.com/count" ></script> <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "62c140f8b9d44cc88fffd4d8b765ab55"}' ></script><body><aside aria-label="Sidebar" id="sidebar" class="d-flex flex-column align-items-end"><header class="profile-wrapper"> <a href="/" id="avatar" class="rounded-circle"><img src="/assets/img/TDKB.png" width="112" height="112" alt="avatar" onerror="this.style.display='none'"></a> <a class="site-title d-block" href="/">Dark Knight Blog</a><p class="site-subtitle fst-italic mb-0">Exploring AI, Security, and Machine Learning</p></header><nav class="flex-column flex-grow-1 w-100 ps-0"><ul class="nav"><li class="nav-item"> <a href="/" class="nav-link"> <i class="fa-fw fas fa-home"></i> <span>HOME</span> </a><li class="nav-item"> <a href="/categories/" class="nav-link"> <i class="fa-fw fas fa-stream"></i> <span>CATEGORIES</span> </a><li class="nav-item"> <a href="/tags/" class="nav-link"> <i class="fa-fw fas fa-tags"></i> <span>TAGS</span> </a><li class="nav-item"> <a href="/archives/" class="nav-link"> <i class="fa-fw fas fa-archive"></i> <span>ARCHIVES</span> </a><li class="nav-item"> <a href="/about/" class="nav-link"> <i class="fa-fw fas fa-info-circle"></i> <span>ABOUT</span> </a></ul></nav><div class="sidebar-bottom d-flex flex-wrap align-items-center w-100"> <button type="button" class="btn btn-link nav-link" aria-label="Switch Mode" id="mode-toggle"> <i class="fas fa-adjust"></i> </button> <span class="icon-border"></span> <a href="https://github.com/mykalseceng" aria-label="github" target="_blank" rel="noopener noreferrer" > <i class="fab fa-github"></i> </a> <a href="https://twitter.com/_Dark_Knight_" aria-label="twitter" target="_blank" rel="noopener noreferrer" > <i class="fa-brands fa-x-twitter"></i> </a> <a href="/feed.xml" aria-label="rss" > <i class="fas fa-rss"></i> </a></div></aside><div id="main-wrapper" class="d-flex justify-content-center"><div class="container d-flex flex-column px-xxl-5"><header id="topbar-wrapper" class="flex-shrink-0" aria-label="Top Bar"><div id="topbar" class="d-flex align-items-center justify-content-between px-lg-3 h-100" ><nav id="breadcrumb" aria-label="Breadcrumb"> <span> <a href="/">Home</a> </span> <span>Back to XPC: Mapping Tahoe's Service Surface</span></nav><button type="button" id="sidebar-trigger" class="btn btn-link" aria-label="Sidebar"> <i class="fas fa-bars fa-fw"></i> </button><div id="topbar-title"> Post</div><button type="button" id="search-trigger" class="btn btn-link" aria-label="Search"> <i class="fas fa-search fa-fw"></i> </button> <search id="search" class="align-items-center ms-3 ms-lg-0"> <i class="fas fa-search fa-fw"></i> <input class="form-control" id="search-input" type="search" aria-label="search" autocomplete="off" placeholder="Search..." > </search> <button type="button" class="btn btn-link text-decoration-none" id="search-cancel">Cancel</button></div></header><div class="row flex-grow-1"><main aria-label="Main Content" class="col-12 col-lg-11 col-xl-9 px-md-4"><article class="px-1" data-toc="true"><header><h1 data-toc-skip>Back to XPC: Mapping Tahoe's Service Surface</h1><p class="post-desc fw-light mb-4">Coming back to macOS XPC research after a long detour — setting up a Tahoe lab, enumerating the service surface, recovering selectors with disarm, and calling them from a host harness</p><div class="post-meta text-muted"> <span> Posted <time data-ts="1778500800" data-df="ll" data-bs-toggle="tooltip" data-bs-placement="bottom" > May 11, 2026 </time> </span> <span> Updated <time data-ts="1778564681" data-df="ll" data-bs-toggle="tooltip" data-bs-placement="bottom" > May 11, 2026 </time> </span><div class="d-flex justify-content-between"> <span> By <em> <a href="https://twitter.com/_Dark_Knight_">Michael Allen</a> </em> </span><div> <span class="readtime" data-bs-toggle="tooltip" data-bs-placement="bottom" title="3841 words" > <em>21 min</em> read</span></div></div></div></header><div id="toc-bar" class="d-flex align-items-center justify-content-between invisible"> <span class="label text-truncate">Back to XPC: Mapping Tahoe's Service Surface</span> <button type="button" class="toc-trigger btn me-1"> <i class="fa-solid fa-list-ul fa-fw"></i> </button></div><button id="toc-solo-trigger" type="button" class="toc-trigger btn btn-outline-secondary btn-sm"> <span class="label ps-2 pe-1">Contents</span> <i class="fa-solid fa-angle-right fa-fw"></i> </button> <dialog id="toc-popup" class="p-0"><div class="header d-flex flex-row align-items-center justify-content-between"><div class="label text-truncate py-2 ms-4">Back to XPC: Mapping Tahoe's Service Surface</div><button id="toc-popup-close" type="button" class="btn mx-1 my-1 opacity-75"> <i class="fas fa-close"></i> </button></div><div id="toc-popup-content" class="px-4 py-3 pb-4"></div></dialog><div class="content"><p><strong>Disclaimer:</strong> This post is for educational purposes and authorized security research only. Everything described here runs against a macOS Tahoe guest in a local virtual machine that I own. Do not point this kind of probing at machines you do not control.</p><h2 id="table-of-contents"><span class="me-2">Table of Contents</span><a href="#table-of-contents" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><ol><li><a href="#why-i-came-back-to-xpc">Why I Came Back to XPC</a><li><a href="#the-setup">The Setup</a><li><a href="#what-is-xpc">What is XPC?</a><li><a href="#what-are-entitlements">What are Entitlements?</a><li><a href="#the-entitlement-database-then-and-now">The Entitlement Database, Then and Now</a><li><a href="#inventorying-the-tahoe-guest">Inventorying the Tahoe Guest</a><li><a href="#recovering-selectors-with-disarm">Recovering Selectors with disarm</a><li><a href="#calling-the-service-from-the-host">Calling the Service from the Host</a><li><a href="#where-that-leaves-us">Where That Leaves Us</a><li><a href="#closing-notes">Closing Notes</a><li><a href="#references">References</a></ol><h2 id="why-i-came-back-to-xpc"><span class="me-2">Why I Came Back to XPC</span><a href="#why-i-came-back-to-xpc" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><blockquote><p><strong>TL;DR</strong> — Years ago I took an interest in macOS and iOS internals and worked through a couple of classes — most notably from Jonathan Levin and Stefan Esser. My career path took a different turn and I drifted away from low-level Apple work, but I am back, starting with XPC on macOS Tahoe. The goal of this first pass is to inventory the packaged <code class="language-plaintext highlighter-rouge">.xpc</code> service bundles on a stock guest, recover their callable surfaces, and figure out which ones an unprivileged or improperly entitled caller can reach. Launchd-only Mach services and XPC endpoints that are not packaged as <code class="language-plaintext highlighter-rouge">.xpc</code> bundles are out of scope for this pass.</p></blockquote><p>Two things drove the choice to start here. First, I was looking at some <a href="https://www.macosvuln.training/curriculum.html">current training material</a> and XPC came up as a recurring vector — enough that I wanted to see for myself how much had actually changed under the hood. Second, this is a class of bug I am familiar enough with to make rapid progress, but distant enough from my recent work that I would learn something either way.</p><p>The part I want to call out before anything else is this: AI has levelled the playing field for this kind of research. When I took those classes years back, the instructors would demo tools live but would not release source. A lot of what they showed me looked like pure magic — selector recovery, dispatcher reversing, runtime introspection. It is not magic anymore. With a capable model and the right prodding, you can reconstruct the same kind of tooling yourself in an afternoon, and you can do it in a way that fits your workflow rather than someone else’s. The intersection of offensive security and AI is the thing I find most exciting right now, and this project is one of the more concrete examples of why.</p><p>I should also say up front that I did not expect to find a real bug here. XPC has had a lot of eyes on it for a lot of years, and any obvious mistakes have long since been hammered out of Apple’s own daemons. But “I do not expect to find anything” is not a reason to skip the work — it is a reason to do the work, because the only way to know what the surface looks like in 2026 is to walk it.</p><h2 id="the-setup"><span class="me-2">The Setup</span><a href="#the-setup" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>One macOS Tahoe (macOS 26) guest running under <a href="https://tart.run">Tart</a> on an Apple Silicon host, with SSH provisioned by a tiny install script:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+</pre><td class="rouge-code"><pre><span class="c"># Install Homebrew if missing</span>
+<span class="k">if</span> <span class="o">!</span> <span class="nb">command</span> <span class="nt">-v</span> brew <span class="o">&gt;</span>/dev/null 2&gt;&amp;1<span class="p">;</span> <span class="k">then</span>
+  /bin/bash <span class="nt">-c</span> <span class="s2">"</span><span class="si">$(</span>curl <span class="nt">-fsSL</span> <span class="se">\</span>
+    https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh<span class="si">)</span><span class="s2">"</span>
+  <span class="o">[[</span> <span class="nt">-x</span> /opt/homebrew/bin/brew <span class="o">]]</span> <span class="o">&amp;&amp;</span> <span class="nb">eval</span> <span class="s2">"</span><span class="si">$(</span>/opt/homebrew/bin/brew shellenv<span class="si">)</span><span class="s2">"</span>
+<span class="k">fi</span>
+
+<span class="c"># Install Tart and Expect (Expect is used for the first-boot SSH provisioning)</span>
+<span class="nb">command</span> <span class="nt">-v</span> tart   <span class="o">&gt;</span>/dev/null 2&gt;&amp;1 <span class="o">||</span> brew <span class="nb">install </span>cirruslabs/cli/tart
+<span class="nb">command</span> <span class="nt">-v</span> expect <span class="o">&gt;</span>/dev/null 2&gt;&amp;1 <span class="o">||</span> brew <span class="nb">install </span>expect
+
+<span class="c"># Pull the Tahoe base image and clone it into a working VM</span>
+<span class="k">if</span> <span class="o">!</span> tart list <span class="nt">--quiet</span> 2&gt;/dev/null | <span class="nb">grep</span> <span class="nt">-qx</span> <span class="s2">"tahoe-base"</span><span class="p">;</span> <span class="k">then
+  </span>tart clone ghcr.io/cirruslabs/macos-tahoe-base:latest tahoe-base
+<span class="k">fi</span>
+
+<span class="c"># Run headless and wait for the guest to get an IP</span>
+<span class="nb">nohup </span>tart run <span class="nt">--no-graphics</span> tahoe-base <span class="o">&gt;</span>/tmp/tart-tahoe-base.log 2&gt;&amp;1 &amp;
+</pre></table></code></div></div><p>The rest of the script — the <code class="language-plaintext highlighter-rouge">expect</code> blocks for password SSH, the bootstrap-user provisioning, and a small helper around <code class="language-plaintext highlighter-rouge">tart clone</code> so each research session can run against a throwaway copy of the base VM — is mechanical glue around those four steps. Once it finishes there is a working SSH login into a clean Tahoe guest, plus a one-liner that produces a fresh disposable clone (mounted at a timestamped name) any time I want to do something I do not want to keep:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre><td class="rouge-code"><pre>ssh macho-reverser@<span class="si">$(</span>tart ip tahoe-base<span class="si">)</span>
+tart clone tahoe-base session-<span class="si">$(</span><span class="nb">date</span> +%s<span class="si">)</span>   <span class="c"># disposable clone, throw away when done</span>
+</pre></table></code></div></div><p>The reason this is a one-liner now is that Apple ships a native <a href="https://developer.apple.com/documentation/virtualization">Virtualization framework</a> that, on Apple Silicon, can host macOS guests directly without emulation. Tart wraps that framework so the workflow is closer to running a container than provisioning a VM. The first pull is the only slow part — the base image lands at around 31 GB on disk on this host — and after that, cloning a fresh disposable guest from the local copy is effectively instant because Tart uses APFS copy-on-write under the hood. That is a meaningful improvement over where things were when I last did this.</p><h2 id="what-is-xpc"><span class="me-2">What is XPC?</span><a href="#what-is-xpc" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>XPC is Apple’s inter-process communication mechanism, and it has become the de facto standard IPC layer across macOS and iOS. Most, though not all, of Apple’s frameworks, daemons, and applications have been rewritten to use it.</p><p>An XPC service is a bundle — a self-contained package with its own <code class="language-plaintext highlighter-rouge">Info.plist</code>, executable, optional resources, and the required <code class="language-plaintext highlighter-rouge">_CodeSignature</code>. The single service I will use as a running example through the rest of this post is <code class="language-plaintext highlighter-rouge">com.apple.hiservices-xpcservice</code>. Here it is on the Tahoe guest:</p><div class="language-text highlighter-rouge"><div class="code-header"> <span data-label-text="Text"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+</pre><td class="rouge-code"><pre>$ ls -la /System/Library/Frameworks/ApplicationServices.framework/Versions/A/\
+Frameworks/HIServices.framework/Versions/A/XPCServices/\
+com.apple.hiservices-xpcservice.xpc
+drwxr-xr-x  3 root  wheel   96 Mar 20 05:25 .
+drwxr-xr-x  3 root  wheel   96 Mar 20 05:25 ..
+drwxr-xr-x  7 root  wheel  224 Mar 20 05:25 Contents
+
+$ ls -la .../com.apple.hiservices-xpcservice.xpc/Contents
+-rw-r--r--  1 root  wheel  1636 Mar 20 05:25 Info.plist
+drwxr-xr-x  3 root  wheel    96 Mar 20 05:25 MacOS
+-rw-r--r--  4 root  wheel     8 Mar 20 05:25 PkgInfo
+-rw-r--r--  1 root  wheel   526 Mar 20 05:25 version.plist
+drwxr-xr-x  3 root  wheel    96 Mar 20 05:25 _CodeSignature
+
+$ ls .../Contents/MacOS
+com.apple.hiservices-xpcservice          # the Mach-O executable, 213184 bytes
+</pre></table></code></div></div><p>The <code class="language-plaintext highlighter-rouge">Info.plist</code> is small and tells you everything you need to know about how <code class="language-plaintext highlighter-rouge">launchd</code> will run it:</p><div class="language-text highlighter-rouge"><div class="code-header"> <span data-label-text="Text"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+</pre><td class="rouge-code"><pre>"CFBundleIdentifier"   =&gt; "com.apple.hiservices-xpcservice"
+"CFBundleExecutable"   =&gt; "com.apple.hiservices-xpcservice"
+"CFBundlePackageType"  =&gt; "XPC!"
+"LSMinimumSystemVersion" =&gt; "26.4"
+"XPCService" =&gt; { "ServiceType" =&gt; "User" }
+</pre></table></code></div></div><p>The bundle is the deployment unit <code class="language-plaintext highlighter-rouge">launchd</code> looks at when an XPC client asks for the service. Everything that defines how the service actually behaves — the dispatcher inside the binary, the message format, the entitlements that gate it — lives inside that bundle.</p><p>Apple exposes XPC at two public layers. The lower layer is the C XPC Services API: <code class="language-plaintext highlighter-rouge">xpc_main</code>, <code class="language-plaintext highlighter-rouge">xpc_connection_create_mach_service</code>, and <code class="language-plaintext highlighter-rouge">xpc_dictionary_*</code> message passing from <code class="language-plaintext highlighter-rouge">&lt;xpc/xpc.h&gt;</code> and <code class="language-plaintext highlighter-rouge">&lt;xpc/connection.h&gt;</code>. That layer dates back to macOS 10.7. Starting in Mac OS X 10.8 / iOS 6, Foundation added the higher-level <a href="https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingXPCServices.html#//apple_ref/doc/uid/10000172i-SW5"><code class="language-plaintext highlighter-rouge">NSXPCConnection</code> API</a>: <code class="language-plaintext highlighter-rouge">NSXPCConnection</code>, <code class="language-plaintext highlighter-rouge">NSXPCListener</code>, <code class="language-plaintext highlighter-rouge">NSXPCInterface</code>, and related objects. That wrapper gives Objective-C, and Swift through Foundation interop, a protocol-and-proxy model over the same IPC boundary.</p><p>The Tahoe capture showed both styles. Most selector-bearing services were NSXPC, where selectors fall out of Objective-C protocol/interface metadata. <code class="language-plaintext highlighter-rouge">com.apple.hiservices-xpcservice</code> is the useful raw-XPC counterexample: callers send an <code class="language-plaintext highlighter-rouge">xpc_dictionary</code> with keys such as <code class="language-plaintext highlighter-rouge">HIS_XPC_SELECTOR</code> and <code class="language-plaintext highlighter-rouge">HIS_XPC_PARAMETERS</code>.</p><h2 id="what-are-entitlements"><span class="me-2">What are Entitlements?</span><a href="#what-are-entitlements" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>Entitlements are key-value pairs embedded in the code signature of a Mach-O binary. They claim capabilities — sandbox membership, private API access, TCC pre-grants, driver attachment, and a long tail of <code class="language-plaintext highlighter-rouge">com.apple.private.*</code> keys that gate access to Apple’s own services.</p><p>The relevant property for this kind of work is that you cannot arbitrarily assign yourself an entitlement. Some entitlements are <em>restricted</em> — AppleMobileFileIntegrity (AMFI) requires them to be attested by a certificate chain that an ad-hoc signature cannot produce. Adding a restricted entitlement and re-signing with an ad-hoc identity is exactly what AMFI is designed to reject. To make that concrete, here is the demo on the guest:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+</pre><td class="rouge-code"><pre><span class="c"># Write a trivial C program</span>
+<span class="nv">$ </span><span class="nb">cat</span> <span class="o">&gt;</span> /tmp/ent_demo.c <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+#include &lt;stdio.h&gt;
+int main(void) { printf("hello, ent</span><span class="se">\n</span><span class="sh">"); return 0; }
+</span><span class="no">EOF
+
+</span><span class="c"># Compile it with the system clang</span>
+<span class="nv">$ </span>clang <span class="nt">-o</span> /tmp/ent_demo /tmp/ent_demo.c
+
+<span class="c"># Author an entitlements plist that claims a restricted Apple entitlement</span>
+<span class="nv">$ </span><span class="nb">cat</span> <span class="o">&gt;</span> /tmp/ent_demo.entitlements <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;&lt;dict&gt;
+&lt;key&gt;com.apple.private.dmd.policy&lt;/key&gt;&lt;true/&gt;
+&lt;/dict&gt;&lt;/plist&gt;
+</span><span class="no">EOF
+
+</span><span class="c"># Sign ad-hoc and embed the entitlement into the code signature</span>
+<span class="nv">$ </span>codesign <span class="nt">--force</span> <span class="nt">--sign</span> - <span class="nt">--entitlements</span> /tmp/ent_demo.entitlements /tmp/ent_demo
+
+<span class="c"># Confirm the entitlement made it into the signature</span>
+<span class="nv">$ </span>codesign <span class="nt">-d</span> <span class="nt">--entitlements</span> - /tmp/ent_demo
+<span class="o">[</span>Dict]
+    <span class="o">[</span>Key] com.apple.private.dmd.policy
+    <span class="o">[</span>Value]
+        <span class="o">[</span>Bool] <span class="nb">true</span>
+
+<span class="c"># Try to run it — AMFI rejects the load before main() runs</span>
+<span class="nv">$ </span>/tmp/ent_demo
+Killed: 9
+
+<span class="c"># 137 = 128 + 9 (SIGKILL), the kill came from AMFI</span>
+<span class="nv">$ </span><span class="nb">echo</span> <span class="nv">$?</span>
+137
+</pre></table></code></div></div><p>The entitlement embeds fine — <code class="language-plaintext highlighter-rouge">codesign</code> will happily attach whatever plist you hand it under an ad-hoc identity. The kernel is what rejects the load. Pulling the AMFI log for the same window:</p><div class="language-text highlighter-rouge"><div class="code-header"> <span data-label-text="Text"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+</pre><td class="rouge-code"><pre>amfid: Restricted entitlements not validated, bailing out.
+amfid: Adhoc signed app with restricted entitlements detected
+amfid: /private/tmp/ent_demo not valid: "The file is adhoc signed but contains
+       restricted entitlements"
+kernel(AppleMobileFileIntegrity): AMFI: code signature validation failed.
+kernel(AppleMobileFileIntegrity): AMFI: bailing out because of restricted
+       entitlements.
+</pre></table></code></div></div><p>Not every entitlement is restricted in this way. On macOS, many <code class="language-plaintext highlighter-rouge">com.apple.security.*</code> entitlements — including App Sandbox and Hardened Runtime entitlements — can be self-declared in the code signature and do not require provisioning-profile authorization.</p><p>Restricted entitlements, especially many capability-backed <code class="language-plaintext highlighter-rouge">com.apple.developer.*</code> entitlements, still require Apple or provisioning-profile authorization and may not be honored just because they appear in an ad-hoc signature. The restricted set is the one this research orbits around, because that is the set a daemon can actually trust to mean what it says.</p><h2 id="the-entitlement-database-then-and-now"><span class="me-2">The Entitlement Database, Then and Now</span><a href="#the-entitlement-database-then-and-now" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>Back when I was first looking at this, the canonical resource was Jonathan Levin’s entitlement database at <a href="https://newosxbook.com/ent.php">newosxbook.com/ent.php</a> — a searchable index of which Apple binaries carried which entitlements, scraped across OS versions. It is still useful as a reference, and it is still up.</p><p>It is dated. To close that gap I have a small query layer of my own — a Flask + MySQL app whose schema mirrors the same per-binary entitlement shape — and the Tahoe capture produces JSONL data that the database tooling can ingest. The collection step on the guest is mechanical: walk each <code class="language-plaintext highlighter-rouge">.xpc</code> bundle, run <code class="language-plaintext highlighter-rouge">codesign -d --entitlements - &lt;binary&gt;</code> on the executable inside it, parse the embedded plist, and emit one JSON row per service into <code class="language-plaintext highlighter-rouge">guest-xpc-entitlements.jsonl</code>. Importing that JSONL on top of the database tooling gives me, on this exact build, a queryable view of which services hold which entitlements.</p><p><a href="/assets/img/entitlement_db1.png" class="popup img-link shimmer"><img src="/assets/img/entitlement_db1.png" alt="Entitlement database — browse view" width="700" loading="lazy"></a> <em>Local entitlement database (Flask + MySQL), browse view.</em></p><p><a href="/assets/img/entitlement_db2.png" class="popup img-link shimmer"><img src="/assets/img/entitlement_db2.png" alt="Entitlement database — detail view" width="500" loading="lazy"></a> <em>Detail view for a single binary. The Tahoe guest capture is ingested into the same schema, so the same queries work against the freshly captured build.</em></p><h2 id="inventorying-the-tahoe-guest"><span class="me-2">Inventorying the Tahoe Guest</span><a href="#inventorying-the-tahoe-guest" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>With a guest up and SSH working, the first job is enumeration. This phase has two tools that do different jobs. Both run <em>inside</em> the guest; the host just drives them over SSH.</p><p><strong><code class="language-plaintext highlighter-rouge">xpc-scout</code>:</strong> A small Swift CLI I wrote that answers “what does the target landscape look like?” It walks apps and nested <code class="language-plaintext highlighter-rouge">.xpc</code> services, parses launchd plists, surfaces Mach service names and run contexts, and ranks the top candidates so I have a triage view before narrowing scope. It is not the thing that produced the 463 / 462 / 394 numbers below — it is the thing that tells me which slice of the system to look at:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre>xpc-scout <span class="nt">--json</span> scan-app /Applications/Target.app
+xpc-scout <span class="nt">--json</span> scan-launchd <span class="nt">--system</span> <span class="nt">--user</span>
+xpc-scout <span class="nt">--json</span> snapshot-stock <span class="nt">--include-user</span>
+xpc-scout <span class="nt">--json</span> rank-snapshot stock-snapshot.json <span class="nt">--limit</span> 100
+</pre></table></code></div></div><p><strong><code class="language-plaintext highlighter-rouge">guest_xpc_bundle_inventory.py</code>:</strong> A separate script that does the mechanical pass over every packaged <code class="language-plaintext highlighter-rouge">.xpc</code> bundle in the chosen scope and produces the dataset the rest of this post is built on. The shape of the walk:</p><div class="language-python highlighter-rouge"><div class="code-header"> <span data-label-text="Python"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+</pre><td class="rouge-code"><pre><span class="n">DEFAULT_ROOTS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="sh">"</span><span class="s">/System</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">/usr/bin</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">/usr/sbin</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">/usr/libexec</span><span class="sh">"</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">/bin</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">/sbin</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">/Applications</span><span class="sh">"</span><span class="p">,</span>
+    <span class="sh">"</span><span class="s">/Library/Apple</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">/Library/Developer</span><span class="sh">"</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">iter_xpc_bundles</span><span class="p">(</span><span class="n">roots</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">dirnames</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">os</span><span class="p">.</span><span class="nf">walk</span><span class="p">(</span><span class="n">root</span><span class="p">):</span>
+            <span class="c1"># skip /System/Volumes/Data, caches, .noindex, ...
+</span>            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dirnames</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">name</span><span class="p">.</span><span class="nf">lower</span><span class="p">().</span><span class="nf">endswith</span><span class="p">(</span><span class="sh">"</span><span class="s">.xpc</span><span class="sh">"</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="nc">Path</span><span class="p">(</span><span class="n">dirpath</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span>
+</pre></table></code></div></div><p>For each yielded bundle the collector then runs through the same recipe:</p><div class="language-python highlighter-rouge"><div class="code-header"> <span data-label-text="Python"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+</pre><td class="rouge-code"><pre><span class="k">for</span> <span class="n">bundle</span> <span class="ow">in</span> <span class="nf">iter_xpc_bundles</span><span class="p">(</span><span class="n">roots</span><span class="p">):</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="nf">read_plist</span><span class="p">(</span><span class="nf">info_plist_for_bundle</span><span class="p">(</span><span class="n">bundle</span><span class="p">))</span>      <span class="c1"># Info.plist
+</span>    <span class="n">exe</span>  <span class="o">=</span> <span class="nf">executable_for_bundle</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>            <span class="c1"># Contents/MacOS/&lt;exec&gt;
+</span>    <span class="n">arch</span> <span class="o">=</span> <span class="nf">architectures</span><span class="p">(</span><span class="nf">file_description</span><span class="p">(</span><span class="n">exe</span><span class="p">))</span>           <span class="c1"># via `file`
+</span>    <span class="n">sign</span> <span class="o">=</span> <span class="nf">codesign_details</span><span class="p">(</span><span class="n">exe</span><span class="p">)</span>                          <span class="c1"># `codesign -dvvv`
+</span>    <span class="k">if</span> <span class="ow">not</span> <span class="nf">is_apple_or_platform</span><span class="p">(</span><span class="n">sign</span><span class="p">):</span>
+        <span class="k">continue</span>
+    <span class="n">ents</span> <span class="o">=</span> <span class="nf">extract_entitlements</span><span class="p">(</span><span class="n">exe</span><span class="p">)</span>                      <span class="c1"># `codesign -d --entitlements :- --xml`
+</span>    <span class="n">sels</span> <span class="o">=</span> <span class="nf">objc_method_selectors</span><span class="p">(</span><span class="n">exe</span><span class="p">)</span>                     <span class="c1"># `disarm -r __TEXT.__objc_methlist`
+</span>    <span class="n">sels</span> <span class="o">+=</span> <span class="nf">string_selector_candidates</span><span class="p">(</span><span class="n">exe</span><span class="p">,</span> <span class="p">...)</span>          <span class="c1"># `disarm -r __TEXT.__objc_methname`
+</span>    <span class="n">keys</span> <span class="o">=</span> <span class="nf">raw_xpc_dictionary_keys</span><span class="p">(</span><span class="n">exe</span><span class="p">)</span>                   <span class="c1"># disarm + string sieve
+</span>    <span class="n">signals</span> <span class="o">=</span> <span class="nf">surface_signals</span><span class="p">(</span><span class="n">exe</span><span class="p">)</span>                        <span class="c1"># NSXPCListener, raw xpc_main,
+</span>                                                          <span class="c1"># audit-token checks, sandbox checks ...
+</span>    <span class="nf">emit_jsonl</span><span class="p">(</span><span class="n">bundle</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">exe</span><span class="p">,</span> <span class="n">arch</span><span class="p">,</span> <span class="n">sign</span><span class="p">,</span> <span class="n">ents</span><span class="p">,</span>
+               <span class="n">sels</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">signals</span><span class="p">)</span>
+</pre></table></code></div></div><p>That is what populates <code class="language-plaintext highlighter-rouge">guest-xpc-bundle-inventory.jsonl</code> — one row per <em>captured Apple / platform <code class="language-plaintext highlighter-rouge">.xpc</code> service bundle with a Mach-O executable</em> — plus a small <code class="language-plaintext highlighter-rouge">guest-xpc-bundle-inventory-summary.json</code> with the aggregates. The inventory unit is the <code class="language-plaintext highlighter-rouge">.xpc</code> bundle itself: <code class="language-plaintext highlighter-rouge">.appex</code> containers can carry nested <code class="language-plaintext highlighter-rouge">.xpc</code> services and those nested bundles get walked, but <code class="language-plaintext highlighter-rouge">.appex</code> bundles are not the inventory unit and launchd-only Mach services that are not packaged this way are not enumerated by this pass.</p><p>The counts at the end of this phase, all attributed to the collector:</p><div class="table-wrapper"><table><thead><tr><th>Metric<th>Count<tbody><tr><td><code class="language-plaintext highlighter-rouge">.xpc</code> bundles checked<td>463<tr><td>Apple / platform service bundles captured<td>462<tr><td>Captured services carrying any entitlement<td><strong>394</strong></table></div><p>I settled on the <strong>394</strong> entitlement-carrying <code class="language-plaintext highlighter-rouge">.xpc</code> bundles as the working set. I did not go through those 394 services by hand. I used Codex’s <code class="language-plaintext highlighter-rouge">/goal</code> command to keep the long-running task stateful, let it spin up sub-agents, and gave it a deliberately mechanical instruction: process every captured service, reverse it further with <code class="language-plaintext highlighter-rouge">disarm</code> as needed, derive the arguments and constraints needed to call each recovered selector, and make at most five attempts per selector before recording the observed reply, error, invalidation, or permission failure. That pass took close to 24 hours, including one accidental process kill along the way.</p><p><code class="language-plaintext highlighter-rouge">hiservices-xpcservice</code> is a useful concrete example of where the pass lands a service on the candidate list. Its own entitlements look unremarkable (<code class="language-plaintext highlighter-rouge">com.apple.hid.manager.user-access-device</code>, <code class="language-plaintext highlighter-rouge">com.apple.private.hid.client.event-monitor</code>, <code class="language-plaintext highlighter-rouge">com.apple.private.dmd.policy</code>, and <code class="language-plaintext highlighter-rouge">com.apple.private.tcc.allow</code> scoped to <code class="language-plaintext highlighter-rouge">kTCCServiceListenEvent</code>), and the <em>dispatcher</em> inside the service has no handler-local audit-token or entitlement gate recovered before it converts the incoming <code class="language-plaintext highlighter-rouge">HIS_XPC_SELECTOR</code> string into an Objective-C selector and invokes it. That does not by itself prove an exploitable missing gate — several of the underlying operations carry their own internal validation (the <code class="language-plaintext highlighter-rouge">HIS_XPC_CFPreferencesCopyValue:</code> path gates reads through permitted domains and keys, the bounded CFPreferences write/sync probes used invalid domains and keys, and <code class="language-plaintext highlighter-rouge">SendAppleEventToSystemProcess</code> returned <code class="language-plaintext highlighter-rouge">-50</code> for invalid event IDs) — but the dispatcher shape is exactly the kind of thing that puts a service on the list for a closer reverse.</p><p>Per-bundle, each record carries enough to make a triage decision without re-reversing:</p><ul><li>bundle path, executable path, signing identifiers and authority chain<li>the full dumped entitlement set<li>linkage signals (<code class="language-plaintext highlighter-rouge">NSXPCListener</code>, <code class="language-plaintext highlighter-rouge">NSXPCInterface</code>, raw <code class="language-plaintext highlighter-rouge">xpc_main</code>, dictionary use, sandbox / audit-token checks)<li>Objective-C selector candidates from <code class="language-plaintext highlighter-rouge">__TEXT.__objc_methlist</code> and <code class="language-plaintext highlighter-rouge">__TEXT.__objc_methname</code><li>decoded type signatures and per-argument labels when type encodings were recoverable<li>raw libxpc dictionary key candidates when the binary uses dictionary APIs</ul><p>Selector candidates pulled from the binary are exactly that — candidates. Presence in <code class="language-plaintext highlighter-rouge">__objc_methname</code> does not mean the method is reachable from outside the process.</p><h2 id="recovering-selectors-with-disarm"><span class="me-2">Recovering Selectors with disarm</span><a href="#recovering-selectors-with-disarm" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>For the actual reversing I leaned on Jonathan Levin’s <a href="https://newosxbook.com/tools/disarm.html">disarm</a>, a small Mach-O / ARM64 disassembler with first-class understanding of Objective-C metadata.</p><p>Walking the <code class="language-plaintext highlighter-rouge">hiservices</code> binary on the guest looks like this. The file is a fat Mach-O, so the architecture has to be picked explicitly:</p><div class="language-text highlighter-rouge"><div class="code-header"> <span data-label-text="Text"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+</pre><td class="rouge-code"><pre>$ ARCH=arm64e disarm -i .../com.apple.hiservices-xpcservice
+File type:        executable
+Format:           Mach-O
+Target OS:        macOS 26.4.0
+Architecture:     ARM64e (ARMv8.3)
+File Size:        0x1c0c0 (114880) bytes
+Entry:            0x18b8
+Binary is digitally signed (use --signature to view)
+</pre></table></code></div></div><p>The section listing is where the interesting bits live. <code class="language-plaintext highlighter-rouge">__objc_methname</code> and <code class="language-plaintext highlighter-rouge">__objc_methlist</code> are the Objective-C metadata that the dispatcher walks at runtime — the names and the name-to-implementation map:</p><div class="language-text highlighter-rouge"><div class="code-header"> <span data-label-text="Text"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre><td class="rouge-code"><pre>$ ARCH=arm64e disarm -L .../com.apple.hiservices-xpcservice
+__TEXT.__text         0x100000f10-0x1000057f8     (code)
+__TEXT.__objc_stubs   0x100006020-0x100006700
+__TEXT.__objc_methlist 0x100006700-0x100006984
+__TEXT.__objc_methname 0x100007b8c-0x100008554   (C-String Literals)
+__TEXT.__objc_methtype 0x1000088ea-0x100008aa4   (C-String Literals)
+__DATA.__objc_const
+__DATA.__objc_selrefs 0x1000102e0-0x100010550
+__DATA.__objc_data    0x100010588-0x1000105d8
+</pre></table></code></div></div><p>Pulling the names out is one more disarm command — <code class="language-plaintext highlighter-rouge">-e</code> extracts a section to a file, and the section’s contents are the null-separated C strings the loader reads at runtime:</p><div class="language-text highlighter-rouge"><div class="code-header"> <span data-label-text="Text"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+</pre><td class="rouge-code"><pre>$ ARCH=arm64e disarm -e __TEXT.__objc_methname \
+    .../com.apple.hiservices-xpcservice
+Extracted __TEXT.__objc_methname (0x7b8c-0x8554) to
+  /tmp/com.apple.hiservices-xpcservice.__TEXT.__objc_methname
+
+$ tr '\0' '\n' \
+    &lt; /tmp/com.apple.hiservices-xpcservice.__TEXT.__objc_methname \
+    | grep -E '^HIS_XPC_'
+HIS_XPC_CFPreferencesCopyValue:
+HIS_XPC_CFNotificationCenterPostNotification:
+HIS_XPC_CFPreferencesSynchronize:
+HIS_XPC_CFPreferencesSetValue:
+HIS_XPC_CopyApplicationPolicyForURLs:
+HIS_XPC_CopyMacManagerPrefs:
+HIS_XPC_CopyPrimaryKeyboardLanguage:
+HIS_XPC_GetCapsLockModifierState:
+HIS_XPC_RevealFileInFinder:
+HIS_XPC_SendAppleEventToSystemProcess:
+HIS_XPC_SetCapsLockDelayOverride:
+HIS_XPC_SetCapsLockLED:
+HIS_XPC_SetCapsLockLEDInhibit:
+HIS_XPC_SetCapsLockModifierState:
+HIS_XPC_SetNetworkLocation:
+... (rest elided)
+</pre></table></code></div></div><p>Those are the methods the dispatcher will route to. Two more strings — <code class="language-plaintext highlighter-rouge">HIS_XPC_SELECTOR</code> and <code class="language-plaintext highlighter-rouge">HIS_XPC_PARAMETERS</code> — live in <code class="language-plaintext highlighter-rouge">__TEXT.__cstring</code> and are the keys the service expects in every incoming <code class="language-plaintext highlighter-rouge">xpc_dictionary</code>: a method name and an argument bag. The dispatcher itself is a short routine off the entry point at <code class="language-plaintext highlighter-rouge">0x18b8</code> that reads <code class="language-plaintext highlighter-rouge">HIS_XPC_SELECTOR</code>, constructs a selector with <code class="language-plaintext highlighter-rouge">sel_registerName</code>, and invokes it on the service object with <code class="language-plaintext highlighter-rouge">HIS_XPC_PARAMETERS</code> as the argument bag. No <code class="language-plaintext highlighter-rouge">xpc_connection_get_audit_token</code> lookup or entitlement query was recovered in that path; what <em>each</em> operation does once invoked still depends on whatever internal validation lives downstream (and several <code class="language-plaintext highlighter-rouge">HIS_XPC_*</code> operations do have such validation).</p><p>Recovering the names is mechanical. The reverse-engineering work is reading the dispatcher and confirming what is — or isn’t — between the boundary and the selector call.</p><h2 id="calling-the-service-from-the-host"><span class="me-2">Calling the Service from the Host</span><a href="#calling-the-service-from-the-host" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>Because <code class="language-plaintext highlighter-rouge">hiservices</code> is raw XPC, calling it is just constructing the right <code class="language-plaintext highlighter-rouge">xpc_dictionary</code> and sending it to the registered Mach service name. No protocol declaration, no <code class="language-plaintext highlighter-rouge">NSXPCInterface</code>, no class allow-listing:</p><div class="language-c highlighter-rouge"><div class="code-header"> <span data-label-text="C"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+</pre><td class="rouge-code"><pre><span class="n">xpc_connection_t</span> <span class="n">conn</span> <span class="o">=</span> <span class="n">xpc_connection_create_mach_service</span><span class="p">(</span>
+    <span class="s">"com.apple.hiservices-xpcservice"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="n">xpc_connection_set_event_handler</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="o">^</span><span class="p">(</span><span class="n">xpc_object_t</span> <span class="n">event</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/* log replies / errors as structured JSON */</span>
+<span class="p">});</span>
+<span class="n">xpc_connection_resume</span><span class="p">(</span><span class="n">conn</span><span class="p">);</span>
+
+<span class="n">xpc_object_t</span> <span class="n">msg</span>    <span class="o">=</span> <span class="n">xpc_dictionary_create</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="n">xpc_object_t</span> <span class="n">params</span> <span class="o">=</span> <span class="n">xpc_dictionary_create</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="n">xpc_dictionary_set_bool</span>  <span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="s">"capsLockLED"</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
+<span class="n">xpc_dictionary_set_string</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s">"HIS_XPC_SELECTOR"</span><span class="p">,</span>   <span class="s">"HIS_XPC_SetCapsLockLED:"</span><span class="p">);</span>
+<span class="n">xpc_dictionary_set_value</span> <span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s">"HIS_XPC_PARAMETERS"</span><span class="p">,</span> <span class="n">params</span><span class="p">);</span>
+
+<span class="n">xpc_object_t</span> <span class="n">reply</span> <span class="o">=</span>
+    <span class="n">xpc_connection_send_message_with_reply_sync</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="n">msg</span><span class="p">);</span>
+</pre></table></code></div></div><p>That is the entire harness. The probe loop wraps it in two layers: a list of selectors and parameter shapes recovered from the disarm pass, and a small JSONL writer that records per-selector <code class="language-plaintext highlighter-rouge">mode</code>, <code class="language-plaintext highlighter-rouge">payload</code>, <code class="language-plaintext highlighter-rouge">status</code> (<code class="language-plaintext highlighter-rouge">reply</code> / <code class="language-plaintext highlighter-rouge">timeout</code> / <code class="language-plaintext highlighter-rouge">proxy_error</code> / <code class="language-plaintext highlighter-rouge">invalidation</code>), and any returned object. A real reply from the capture looked like this; this one is <code class="language-plaintext highlighter-rouge">HIS_XPC_CopyMacManagerPrefs:</code> over the working full Mach-service transport on attempt 2:</p><div class="language-text highlighter-rouge"><div class="code-header"> <span data-label-text="Text"><i class="fas fa-code fa-fw small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+</pre><td class="rouge-code"><pre>selector=HIS_XPC_CopyMacManagerPrefs:
+attempt=2
+transport=mach
+connection_name=com.apple.hiservices-xpcservice
+event=reply
+
+&lt;dictionary: 0xad3024000&gt; { count = 1, transaction: 0, voucher = 0x0, contents =
+    "REPLY" =&gt; &lt;dictionary: 0xad30200c0&gt; { count = 6, transaction: 0, voucher = 0x0, contents =
+        "SystemPrefsRestricted" =&gt; &lt;bool: 0x20d857850&gt;: false
+        "DisableScreenLockImmediate" =&gt; &lt;bool: 0x20d857850&gt;: false
+        "RemoveAppStoreMenu" =&gt; &lt;bool: 0x20d857850&gt;: false
+        "ShutDownDisabledWhileLoggedIn" =&gt; &lt;bool: 0x20d857850&gt;: false
+        "LogOutDisabledWhileLoggedIn" =&gt; &lt;bool: 0x20d857850&gt;: false
+        "RestartDisabledWhileLoggedIn" =&gt; &lt;bool: 0x20d857850&gt;: false
+    }
+}
+</pre></table></code></div></div><p>For the NSXPC services in the inventory the harness has a parallel path that builds an <code class="language-plaintext highlighter-rouge">NSXPCConnection</code> and a synthesised <code class="language-plaintext highlighter-rouge">@protocol</code> from the recovered selectors, but for <code class="language-plaintext highlighter-rouge">hiservices</code> the raw path is all that is needed. <code class="language-plaintext highlighter-rouge">Info.plist</code> declares the bundle as <code class="language-plaintext highlighter-rouge">"XPCService": { "ServiceType": "User" }</code>, so the service is launched per-user rather than as a system-wide daemon; in the probe runs the successful transport was <code class="language-plaintext highlighter-rouge">mach:com.apple.hiservices-xpcservice</code> resolved within the guest/session context. The dispatcher accepts the dictionary without a handler-local audit-token gate, the synchronous send returns the semantic reply, and connection invalidation events are logged separately by the connection handler.</p><p>The same JSONL feeds the abuse-potential review. Across the 394 entitlement-carrying <code class="language-plaintext highlighter-rouge">.xpc</code> bundles on this capture, the per-selector records sort the surface into roughly four buckets borrowed from the review taxonomy: <strong>confirmed reachable</strong> (replies or accepted one-way sends on real evidence), <strong>confirmed but bounded / no-op</strong> (reachable, but the probe payloads were invalid, no-op, or returned downstream errors), <strong>blocked</strong> by entitlement, launch context, hardware, or domain fixture, and <strong>metadata mismatch / not invocation-ready</strong> (the workqueue marked the row successful but the packet evidence is only selector recovery). <code class="language-plaintext highlighter-rouge">hiservices</code> lands in <em>confirmed reachable</em> — every recovered <code class="language-plaintext highlighter-rouge">HIS_XPC_*</code> operation replied on attempt 2 from the host harness, with bounded inputs — which is what put it on the candidate list.</p><h2 id="where-that-leaves-us"><span class="me-2">Where That Leaves Us</span><a href="#where-that-leaves-us" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>The phase this post covers is the <em>callable surface</em> phase, scoped to the 462 captured <code class="language-plaintext highlighter-rouge">.xpc</code> bundles (394 with entitlements). It tells me which selectors of which packaged <code class="language-plaintext highlighter-rouge">.xpc</code> services replied to the host harness under the guest/session transport that was actually exercised. It does not cover launchd-only Mach services that ship without an <code class="language-plaintext highlighter-rouge">.xpc</code> bundle, and it does not tell me whether any of the reachable selectors are <em>exploitable</em> — that is the next phase, and it is a different kind of work.</p><p>In my mind this bug class is dead, but there are a handful of targets on the candidate list that warrant a closer look before I write it off entirely. The most interesting ones cluster around the usual suspects: authorization, file-access helpers, archive extraction, parser surfaces, and the older raw-XPC services whose handler-local dispatcher gates look thin in the disarm pass.</p><h2 id="closing-notes"><span class="me-2">Closing Notes</span><a href="#closing-notes" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>The thing I keep coming back to is how different this work feels now compared to a few years ago. Not the targets — the targets are the same shape they have always been — but the loop. Stand up a guest in seconds, walk a stock OS’s service surface in an afternoon, recover selectors and dispatchers with <code class="language-plaintext highlighter-rouge">disarm</code>, generate a probe harness from that pass without writing every line of glue code myself, and end the day with structured data I can query.</p><p>If you are coming back to low-level Apple work after a detour, my advice is the same advice I would give to anyone restarting in any deep area: pick one small surface, walk it end-to-end on hardware you control, and let the gaps in what you remember surface themselves.</p><p>Next post will go after one of the candidate services from this capture and try to actually break something. We will see.</p><h2 id="references"><span class="me-2">References</span><a href="#references" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><ul><li><strong>disarm</strong> — Jonathan Levin’s Mach-O / ARM64 disassembler, <a href="https://newosxbook.com/tools/disarm.html">newosxbook.com/tools/disarm.html</a>.<li><strong>Entitlement database (Levin)</strong> — <a href="https://newosxbook.com/ent.php">newosxbook.com/ent.php</a>.<li><strong>macOS Vulnerability Research training</strong> — <a href="https://www.macosvuln.training/curriculum.html">macosvuln.training/curriculum.html</a> by <a href="https://x.com/theevilbit">@theevilbit</a>.<li><strong>XPC internals</strong> — <em><a href="https://a.co/d/05RzMDNo">MacOS and iOS Internals, Volume I: User Mode</a></em>, Jonathan Levin. Chapter 14 — <em>X is not a Procedure Call: XPC Internals</em>.</ul></div><div class="post-tail-wrapper text-muted"><div class="post-meta mb-3"> <i class="far fa-folder-open fa-fw me-1"></i> <a href="/categories/security/">security</a>, <a href="/categories/macos/">macos</a>, <a href="/categories/offensive-security/">offensive-security</a></div><div class="post-tags"> <i class="fa fa-tags fa-fw me-1"></i> <a href="/tags/macos/" class="post-tag no-text-decoration" >macos</a> <a href="/tags/xpc/" class="post-tag no-text-decoration" >xpc</a> <a href="/tags/nsxpc/" class="post-tag no-text-decoration" >nsxpc</a> <a href="/tags/tahoe/" class="post-tag no-text-decoration" >tahoe</a> <a href="/tags/reverse-engineering/" class="post-tag no-text-decoration" >reverse-engineering</a> <a href="/tags/disarm/" class="post-tag no-text-decoration" >disarm</a> <a href="/tags/tart/" class="post-tag no-text-decoration" >tart</a> <a href="/tags/offensive-security/" class="post-tag no-text-decoration" >offensive-security</a></div><div class=" post-tail-bottom d-flex justify-content-between align-items-center mt-5 pb-2 " ><div class="license-wrapper"> This post is licensed under <a href="https://creativecommons.org/licenses/by/4.0/"> CC BY 4.0 </a> by the author.</div><div class="share-wrapper d-flex align-items-center"> <span class="share-label text-muted">Share</span> <span class="share-icons"> <a href="https://twitter.com/intent/tweet?text=Back%20to%20XPC:%20Mapping%20Tahoe's%20Service%20Surface%20-%20Dark%20Knight%20Blog&url=https%3A%2F%2Fmykalseceng.github.io%2Fposts%2Fback-to-xpc-mapping-tahoe%2F" target="_blank" rel="noopener" data-bs-toggle="tooltip" data-bs-placement="top" title="Twitter" aria-label="Twitter"> <i class="fa-fw fa-brands fa-square-x-twitter"></i> </a> <a href="https://www.facebook.com/sharer/sharer.php?title=Back%20to%20XPC:%20Mapping%20Tahoe's%20Service%20Surface%20-%20Dark%20Knight%20Blog&u=https%3A%2F%2Fmykalseceng.github.io%2Fposts%2Fback-to-xpc-mapping-tahoe%2F" target="_blank" rel="noopener" data-bs-toggle="tooltip" data-bs-placement="top" title="Facebook" aria-label="Facebook"> <i class="fa-fw fab fa-facebook-square"></i> </a> <a href="https://t.me/share/url?url=https%3A%2F%2Fmykalseceng.github.io%2Fposts%2Fback-to-xpc-mapping-tahoe%2F&text=Back%20to%20XPC:%20Mapping%20Tahoe's%20Service%20Surface%20-%20Dark%20Knight%20Blog" target="_blank" rel="noopener" data-bs-toggle="tooltip" data-bs-placement="top" title="Telegram" aria-label="Telegram"> <i class="fa-fw fab fa-telegram"></i> </a> <button id="copy-link" aria-label="Copy link" class="btn small" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy link" data-title-succeed="Link copied successfully!" > <i class="fa-fw fas fa-link pe-none fs-6"></i> </button> </span></div></div></div></article></main><aside aria-label="Panel" id="panel-wrapper" class="col-xl-3 ps-2 text-muted"><div class="access"><section id="access-lastmod"><h2 class="panel-heading">Recently Updated</h2><ul class="content list-unstyled ps-0 pb-1 ms-1 mt-2"><li class="text-truncate lh-lg"> <a href="/posts/back-to-xpc-mapping-tahoe/">Back to XPC: Mapping Tahoe's Service Surface</a><li class="text-truncate lh-lg"> <a href="/posts/argus-agentic-threat-modeling/">Argus: Agentic Threat Modeling with the Claude Agent SDK</a><li class="text-truncate lh-lg"> <a href="/posts/agentic-offensive-tooling-principles/">Building Blocks for Agentic Solutions</a><li class="text-truncate lh-lg"> <a href="/posts/cassian-differential-security-review/">Cassian: Agentic Differential Security Review for Pull Requests</a><li class="text-truncate lh-lg"> <a href="/posts/agentic-pentest-platform/">ODYSSEUS: Building an Agentic Pentest Platform</a></ul></section><section><h2 class="panel-heading">Trending Tags</h2><div class="d-flex flex-wrap mt-3 mb-1 me-3"> <a class="post-tag btn btn-outline-primary" href="/tags/automation/">automation</a> <a class="post-tag btn btn-outline-primary" href="/tags/agents/">agents</a> <a class="post-tag btn btn-outline-primary" href="/tags/llm/">llm</a> <a class="post-tag btn btn-outline-primary" href="/tags/offensive-security/">offensive-security</a> <a class="post-tag btn btn-outline-primary" href="/tags/vulnerability-assessment/">vulnerability-assessment</a> <a class="post-tag btn btn-outline-primary" href="/tags/burp-suite/">burp-suite</a> <a class="post-tag btn btn-outline-primary" href="/tags/claude-code/">claude-code</a> <a class="post-tag btn btn-outline-primary" href="/tags/fine-tuning/">fine-tuning</a> <a class="post-tag btn btn-outline-primary" href="/tags/ollama/">ollama</a> <a class="post-tag btn btn-outline-primary" href="/tags/advisor-strategy/">advisor-strategy</a></div></section></div><div class="toc-border-cover z-3"></div><section id="toc-wrapper" class="invisible position-sticky ps-0 pe-4 pb-4"><h2 class="panel-heading ps-3 pb-2 mb-0">Contents</h2><nav id="toc"></nav></section></aside></div><div class="row"><div id="tail-wrapper" class="col-12 col-lg-11 col-xl-9 px-md-4"><aside id="related-posts" aria-labelledby="related-label"><h3 class="mb-4" id="related-label">Further Reading</h3><nav class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-4"><article class="col"> <a href="/posts/agentic-offensive-tooling-principles/" class="post-preview card h-100"><div class="card-body"> <time data-ts="1776772800" data-df="ll" > Apr 21, 2026 </time><h4 class="pt-0 my-2">Building Blocks for Agentic Solutions</h4><div class="text-muted"><p>The building blocks I use when designing agentic solutions</p></div></div></a></article><article class="col"> <a href="/posts/argus-agentic-threat-modeling/" class="post-preview card h-100"><div class="card-body"> <time data-ts="1776945600" data-df="ll" > Apr 23, 2026 </time><h4 class="pt-0 my-2">Argus: Agentic Threat Modeling with the Claude Agent SDK</h4><div class="text-muted"><p>How Argus wraps Trail of Bits' skills and the advisor/executor pattern into an end-to-end threat-modeling pipeline</p></div></div></a></article><article class="col"> <a href="/posts/cassian-differential-security-review/" class="post-preview card h-100"><div class="card-body"> <time data-ts="1773144000" data-df="ll" > Mar 10, 2026 </time><h4 class="pt-0 my-2">Cassian: Agentic Differential Security Review for Pull Requests</h4><div class="text-muted"><p>How Cassian uses 14 specialized agents to review PRs for security regressions, with an experiment in semi-formal reasoning certificates for structured code analysis</p></div></div></a></article></nav></aside><nav class="post-navigation d-flex justify-content-between" aria-label="Post Navigation"> <a href="/posts/argus-agentic-threat-modeling/" class="btn btn-outline-primary" aria-label="Older" ><p>Argus: Agentic Threat Modeling with the Claude Agent SDK</p></a><div class="btn btn-outline-primary disabled" aria-label="Newer"><p>-</p></div></nav><footer aria-label="Site Info" class=" d-flex flex-column justify-content-center text-muted flex-lg-row justify-content-lg-between align-items-lg-center pb-lg-3 " ><p>© <time>2026</time> <a href="https://twitter.com/_Dark_Knight_">Michael Allen</a>. <span data-bs-toggle="tooltip" data-bs-placement="top" title="Except where otherwise noted, the blog posts on this site are licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License by the author." >Some rights reserved.</span></p><p>Using the <a data-bs-toggle="tooltip" data-bs-placement="top" title="v7.5.0" href="https://github.com/cotes2020/jekyll-theme-chirpy" target="_blank" rel="noopener" >Chirpy</a> theme for <a href="https://jekyllrb.com" target="_blank" rel="noopener">Jekyll</a>.</p></footer></div></div><div id="search-result-wrapper" class="d-flex justify-content-center d-none"><div class="col-11 content"><div id="search-hints"><section><h2 class="panel-heading">Trending Tags</h2><div class="d-flex flex-wrap mt-3 mb-1 me-3"> <a class="post-tag btn btn-outline-primary" href="/tags/automation/">automation</a> <a class="post-tag btn btn-outline-primary" href="/tags/agents/">agents</a> <a class="post-tag btn btn-outline-primary" href="/tags/llm/">llm</a> <a class="post-tag btn btn-outline-primary" href="/tags/offensive-security/">offensive-security</a> <a class="post-tag btn btn-outline-primary" href="/tags/vulnerability-assessment/">vulnerability-assessment</a> <a class="post-tag btn btn-outline-primary" href="/tags/burp-suite/">burp-suite</a> <a class="post-tag btn btn-outline-primary" href="/tags/claude-code/">claude-code</a> <a class="post-tag btn btn-outline-primary" href="/tags/fine-tuning/">fine-tuning</a> <a class="post-tag btn btn-outline-primary" href="/tags/ollama/">ollama</a> <a class="post-tag btn btn-outline-primary" href="/tags/advisor-strategy/">advisor-strategy</a></div></section></div><div id="search-results" class="d-flex flex-wrap justify-content-center text-muted mt-3"></div></div></div></div><aside aria-label="Scroll to Top"> <button id="back-to-top" type="button" class="btn btn-lg btn-box-shadow"> <i class="fas fa-angle-up"></i> </button></aside></div><div id="mask" class="d-none position-fixed w-100 h-100 z-1"></div><aside id="notification" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-animation="true" data-bs-autohide="false" ><div class="toast-header"> <button type="button" class="btn-close ms-auto" data-bs-dismiss="toast" aria-label="Close" ></button></div><div class="toast-body text-center pt-0"><p class="px-2 mb-3">A new version of content is available.</p><button type="button" class="btn btn-primary" aria-label="Update"> Update </button></div></aside><script> document.addEventListener('DOMContentLoaded', () => { SimpleJekyllSearch({ searchInput: document.getElementById('search-input'), resultsContainer: document.getElementById('search-results'), json: '/assets/js/data/search.json', searchResultTemplate: '<article class="px-1 px-sm-2 px-lg-4 px-xl-0"><header><h2><a href="{url}">{title}</a></h2><div class="post-meta d-flex flex-column flex-sm-row text-muted mt-1 mb-1"> {categories} {tags}</div></header><p>{content}</p></article>', noResultsText: '<p class="mt-5">Oops! No results found.</p>', templateMiddleware: function(prop, value, template) { if (prop === 'categories') { if (value === '') { return `${value}`; } else { return `<div class="me-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`; } } if (prop === 'tags') { if (value === '') { return `${value}`; } else { return `<div><i class="fa fa-tag fa-fw"></i>${value}</div>`; } } } }); }); </script>

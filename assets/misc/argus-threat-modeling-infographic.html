@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Argus — Agentic Threat Modeling Pipeline</title>
+<meta name="viewport" content="width=1440" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4efe6;
+    --bg-2: #ebe4d6;
+    --ink: #1a1814;
+    --ink-2: #4a453c;
+    --ink-3: #807866;
+    --rule: #1a1814;
+    --paper: #faf6ee;
+    --accent: oklch(0.58 0.14 35);        /* warm terracotta */
+    --accent-soft: oklch(0.58 0.14 35 / 0.12);
+    --advisor: oklch(0.48 0.10 240);      /* ink blue */
+    --advisor-soft: oklch(0.48 0.10 240 / 0.12);
+    --critical: oklch(0.52 0.17 25);
+    --high: oklch(0.62 0.14 45);
+    --medium: oklch(0.72 0.10 85);
+    --low: oklch(0.78 0.05 140);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    font-feature-settings: "ss01", "cv11";
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .serif { font-family: "Fraunces", serif; font-style: italic; font-weight: 400; }
+
+  .page {
+    width: 1440px;
+    margin: 0 auto;
+    padding: 72px 88px 96px;
+    background: var(--bg);
+    position: relative;
+  }
+
+  /* ---------- Masthead ---------- */
+  .mast {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1.5px solid var(--rule);
+  }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  h1.title {
+    font-family: "Fraunces", serif;
+    font-weight: 500;
+    font-size: 72px;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin: 0 0 12px;
+    color: var(--ink);
+  }
+  h1.title .it { font-style: italic; font-weight: 400; color: var(--accent); }
+  .subtitle {
+    font-family: "Fraunces", serif;
+    font-size: 22px;
+    line-height: 1.3;
+    color: var(--ink-2);
+    max-width: 560px;
+    font-weight: 400;
+  }
+  .mast-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-bottom: 4px;
+  }
+  .tldr {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    border-left: 2px solid var(--accent);
+    padding: 4px 0 4px 20px;
+    max-width: 520px;
+  }
+  .tldr strong { color: var(--ink); font-weight: 600; }
+  .mast-meta {
+    display: flex;
+    gap: 40px;
+    margin-top: 22px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .mast-meta b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Section heads ---------- */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    margin: 56px 0 24px;
+  }
+  .section-head .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+  }
+  .section-head h2 {
+    font-family: "Fraunces", serif;
+    font-weight: 500;
+    font-size: 30px;
+    margin: 0;
+    letter-spacing: -0.015em;
+  }
+  .section-head .rule {
+    flex: 1;
+    height: 1px;
+    background: var(--ink);
+    opacity: 0.3;
+    margin-left: 8px;
+  }
+
+  /* ---------- Inputs strip ---------- */
+  .inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 18px;
+  }
+  .input-card {
+    background: var(--paper);
+    border: 1px solid rgba(26,24,20,0.12);
+    padding: 18px 20px;
+    border-radius: 2px;
+    position: relative;
+  }
+  .input-card .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 10px;
+  }
+  .input-card .v {
+    font-family: "Fraunces", serif;
+    font-size: 18px;
+    line-height: 1.2;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .input-card .d {
+    font-size: 12px;
+    color: var(--ink-2);
+    line-height: 1.4;
+  }
+
+  /* ---------- Pipeline ---------- */
+  .pipeline {
+    position: relative;
+    padding: 8px 0 0;
+  }
+  .pipe-spine {
+    position: absolute;
+    left: 108px;
+    top: 40px;
+    bottom: 40px;
+    width: 2px;
+    background: var(--ink);
+    opacity: 0.2;
+    z-index: 0;
+  }
+  .phase {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 36px;
+    padding: 18px 0;
+    position: relative;
+  }
+  .phase + .phase { position: relative; }
+  .phase + .phase::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 170px;
+    right: 0;
+    height: 0;
+    border-top: 1px dashed rgba(26,24,20,0.30);
+  }
+
+  .phase-marker {
+    position: relative;
+    padding-top: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .phase-marker .idx {
+    font-family: "Fraunces", serif;
+    font-size: 56px;
+    font-weight: 400;
+    line-height: 0.9;
+    color: var(--ink);
+    letter-spacing: -0.04em;
+  }
+  .phase-marker .idx .sup {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    vertical-align: super;
+    color: var(--ink-3);
+    margin-left: 4px;
+  }
+  .phase-marker .node {
+    position: absolute;
+    left: 102px;
+    top: 26px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--ink);
+    z-index: 2;
+  }
+  .phase.has-advisor .node { background: var(--accent); border-color: var(--accent); }
+  .phase.fanout .node {
+    width: 18px; height: 18px;
+    top: 24px;
+    left: 100px;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+  }
+
+  .phase-body {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 28px;
+    padding-top: 6px;
+  }
+  .phase-title {
+    font-family: "Fraunces", serif;
+    font-weight: 500;
+    font-size: 26px;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    line-height: 1.1;
+  }
+  .phase-id {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11.5px;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
+  }
+  .phase-desc {
+    font-size: 13.5px;
+    color: var(--ink-2);
+    line-height: 1.55;
+    max-width: 500px;
+  }
+  .phase-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tag {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border: 1px solid rgba(26,24,20,0.25);
+    border-radius: 2px;
+    color: var(--ink-2);
+    background: var(--paper);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    line-height: 1.5;
+  }
+  .tag-row { row-gap: 6px; }
+  .tag.skill { border-color: var(--accent); color: var(--accent); background: transparent; }
+  .tag.advisor { border-color: var(--advisor); color: var(--advisor); background: var(--advisor-soft); }
+  .tag.fan { border-color: var(--ink); color: var(--ink); background: transparent; font-weight: 500; }
+
+  .artifact {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--ink-2);
+    padding: 6px 10px;
+    background: var(--bg-2);
+    border-left: 2px solid var(--ink);
+    line-height: 1.4;
+  }
+  .artifact .lbl {
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-right: 6px;
+  }
+
+  /* Concurrent group */
+  .concurrent-band {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 36px;
+    padding: 18px 0 10px;
+    position: relative;
+  }
+  .concurrent-band + .phase::before { left: 170px; }
+  .concurrent-marker {
+    padding-top: 4px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    position: relative;
+  }
+  .concurrent-marker .cbar {
+    margin-top: 8px;
+    width: 32px;
+    height: 2px;
+    background: var(--ink);
+  }
+  /* fan-out splitter node on the spine */
+  .concurrent-marker::after {
+    content: "";
+    position: absolute;
+    left: 100px;
+    top: 2px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--accent);
+    background: var(--bg);
+    transform: rotate(45deg);
+    z-index: 2;
+  }
+  .concurrent-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    padding: 12px 0;
+    border-top: 1px solid rgba(26,24,20,0.2);
+    border-bottom: 1px solid rgba(26,24,20,0.2);
+    background: rgba(26,24,20,0.025);
+    padding: 18px 20px;
+    border-radius: 2px;
+  }
+  .mini-phase .mini-title {
+    font-family: "Fraunces", serif;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.15;
+    margin-bottom: 2px;
+  }
+  .mini-phase .mini-id {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .mini-phase .mini-desc {
+    font-size: 12.5px;
+    color: var(--ink-2);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  /* ---------- Advisor callout ---------- */
+  .advisor-callout {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--advisor-soft);
+    border-left: 2px solid var(--advisor);
+    font-size: 12px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .advisor-callout .hd {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--advisor);
+    margin-bottom: 4px;
+  }
+
+  /* ---------- Executor/Advisor diagram ---------- */
+  .eadiagram {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    background: var(--paper);
+    border: 1px solid rgba(26,24,20,0.12);
+    padding: 32px;
+    border-radius: 2px;
+  }
+  .eadiagram h3 {
+    font-family: "Fraunces", serif;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .ea-narrative { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
+  .ea-list { list-style: none; padding: 0; margin: 14px 0 0; }
+  .ea-list li {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px dashed rgba(26,24,20,0.18);
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .ea-list li:first-child { border-top: none; }
+  .ea-list .n {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .ea-list b { color: var(--ink); font-weight: 600; }
+
+  .ea-viz {
+    position: relative;
+    padding: 8px 0;
+  }
+  .ea-viz svg { width: 100%; height: auto; display: block; }
+
+  /* ---------- Results ---------- */
+  .results {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  .counts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .count-card {
+    background: var(--paper);
+    border: 1px solid rgba(26,24,20,0.12);
+    padding: 18px 16px 16px;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+  .count-card .bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .count-card.critical .bar { background: var(--critical); }
+  .count-card.high .bar { background: var(--high); }
+  .count-card.medium .bar { background: var(--medium); }
+  .count-card.low .bar { background: var(--low); }
+  .count-card .lbl {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 10px;
+  }
+  .count-card .num {
+    font-family: "Fraunces", serif;
+    font-size: 48px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .count-card .unit {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    color: var(--ink-3);
+    margin-top: 6px;
+  }
+  .totals {
+    display: flex;
+    gap: 32px;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1.5px solid var(--rule);
+  }
+  .totals .t .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+  }
+  .totals .t .v {
+    font-family: "Fraunces", serif;
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .totals .t .v .unit { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-3); margin-left: 4px; }
+
+  /* Threat sample */
+  .threat-card {
+    background: var(--ink);
+    color: var(--bg);
+    padding: 24px 28px;
+    border-radius: 2px;
+    position: relative;
+  }
+  .threat-card .pri {
+    display: inline-block;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    background: var(--critical);
+    color: #fff;
+    margin-bottom: 14px;
+  }
+  .threat-card h4 {
+    font-family: "Fraunces", serif;
+    font-weight: 500;
+    font-size: 20px;
+    line-height: 1.2;
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .threat-card .row {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 10px;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 12px;
+  }
+  .threat-card .row:first-of-type { border-top: none; }
+  .threat-card .row .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    padding-top: 2px;
+  }
+  .threat-card .row .v { color: rgba(255,255,255,0.9); line-height: 1.4; }
+  .threat-card .row .v.mono { font-family: "JetBrains Mono", monospace; font-size: 11px; }
+
+  /* Key critical themes */
+  .themes {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .theme {
+    background: var(--paper);
+    border: 1px solid rgba(26,24,20,0.12);
+    padding: 16px 18px;
+    border-radius: 2px;
+  }
+  .theme .t {
+    font-family: "Fraunces", serif;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    line-height: 1.25;
+  }
+  .theme .d { font-size: 12px; color: var(--ink-2); line-height: 1.5; }
+  .theme .trace {
+    margin-top: 8px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+
+  /* ---------- Loop footer ---------- */
+  .loop {
+    margin-top: 60px;
+    padding: 32px 36px;
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 2px;
+  }
+  .loop h3 {
+    font-family: "Fraunces", serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .loop .sub {
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 22px;
+  }
+  .loop-chain {
+    display: grid;
+    grid-template-columns: 1fr 24px 1fr 24px 1fr 24px 1fr;
+    align-items: stretch;
+    gap: 0;
+  }
+  .loop-node {
+    padding: 16px 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    position: relative;
+    background: rgba(255,255,255,0.03);
+  }
+  .loop-node + .loop-node { border-left: none; }
+  .loop-node.active { background: var(--accent); border-color: var(--accent); }
+  .loop-node .step {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 6px;
+  }
+  .loop-node.active .step { color: rgba(255,255,255,0.85); }
+  .loop-node .name {
+    font-family: "Fraunces", serif;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+  .loop-node .role {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.4;
+  }
+  .loop-arrow {
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.4);
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  /* ---------- Footer ---------- */
+  .colophon {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(26,24,20,0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .colophon .disclaimer {
+    max-width: 760px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: "Inter", sans-serif;
+    font-size: 11.5px;
+    color: var(--ink-3);
+    line-height: 1.55;
+  }
+</style>
+</head>
+<body>
+<div class="page" data-screen-label="Argus Infographic">
+
+  <!-- ============ MASTHEAD ============ -->
+  <header class="mast">
+    <div>
+      <div class="eyebrow"><span class="dot"></span>Argus · Pipeline Overview · v1 · 2026-04-23</div>
+      <h1 class="title">The hundred<span class="it">-eyed</span><br/>threat model.</h1>
+      <div class="subtitle">A framework-agnostic, agentic threat-modeling pipeline — built on Cerbero, the Claude Agent SDK, and Trail of Bits' Claude Code skills.</div>
+    </div>
+    <div class="mast-right">
+      <div class="tldr">
+        <strong>TL;DR —</strong> Many specialized agents examine a target from different angles, a small number of advisor agents critique the high-leverage phases, and the pipeline produces a prioritized <span class="mono">threats.json</span> plus a narrative report. Trail of Bits' skills do the heavy lifting; the Agent SDK lets agents call them directly.
+      </div>
+      <div class="mast-meta">
+        <div><b>08</b> phases</div>
+        <div><b>02</b> fan-outs</div>
+        <div><b>04</b> advisor seats</div>
+        <div><b>01</b> threats.json</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ INPUTS ============ -->
+  <div class="section-head">
+    <h2>Inputs</h2>
+    <div class="rule"></div>
+  </div>
+  <div class="inputs">
+    <div class="input-card">
+      <div class="k">Manifest</div>
+      <div class="v">EngagementSpec</div>
+      <div class="d">YAML pointing at one or more repositories, with optional base refs and secret policies.</div>
+    </div>
+    <div class="input-card">
+      <div class="k">Source</div>
+      <div class="v">Target repositories</div>
+      <div class="d">Cloned locally; scoped, not sampled. Every finding must cite <span class="mono">path:line-line</span>.</div>
+    </div>
+    <div class="input-card">
+      <div class="k">Context</div>
+      <div class="v">Design docs (PDF)</div>
+      <div class="d">Optional architecture docs, runbooks, deployment facts — text-extracted for actor/boundary mining.</div>
+    </div>
+    <div class="input-card">
+      <div class="k">Operator</div>
+      <div class="v">Engagement framing</div>
+      <div class="d">Scope, known boundaries, and any operator context that shapes what's worth attacking.</div>
+    </div>
+  </div>
+
+  <!-- ============ PIPELINE ============ -->
+  <div class="section-head">
+    <h2>The pipeline</h2>
+    <div class="rule"></div>
+  </div>
+
+  <section class="pipeline">
+    <div class="pipe-spine"></div>
+
+    <!-- Phase 1 -->
+    <div class="phase">
+      <div class="phase-marker">
+        <div class="idx">01</div>
+        <div class="node"></div>
+      </div>
+      <div class="phase-body">
+        <div>
+          <div class="phase-title">Ingest</div>
+          <div class="phase-id">ingester · haiku-4-5</div>
+          <div class="phase-desc">Parse the manifest, resolve paths and refs, clone repos, extract PDF text, run a secret scan. Mechanical work — the cheapest model on the roster.</div>
+        </div>
+        <div class="phase-meta">
+          <div class="tag-row">
+            <span class="tag">executor</span>
+            <span class="tag">secret-scan</span>
+          </div>
+          <div class="artifact"><span class="lbl">out</span>manifest.resolved.json</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase">
+      <div class="phase-marker">
+        <div class="idx">02</div>
+        <div class="node"></div>
+      </div>
+      <div class="phase-body">
+        <div>
+          <div class="phase-title">Audit context</div>
+          <div class="phase-id">audit-context-builder · sonnet-4-6</div>
+          <div class="phase-desc">Build deep per-repository context before vulnerability hunting — architecture, module map, trust surfaces. Grounded in files that actually exist in the target.</div>
+        </div>
+        <div class="phase-meta">
+          <div class="tag-row">
+            <span class="tag">executor</span>
+            <span class="tag skill">audit-context-building</span>
+            <span class="tag">read-only</span>
+          </div>
+          <div class="artifact"><span class="lbl">out</span>phases/02-audit-context/context.md</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concurrent band (phases 3a/3b/3c) -->
+    <div class="concurrent-band">
+      <div class="concurrent-marker">
+        <div>Concurrent</div>
+        <div>fan-out</div>
+        <div class="cbar"></div>
+        <div style="margin-top:6px;">joins before<br/>phase 04</div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:10px;">
+          <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:500;letter-spacing:-0.01em;">03 · Fan-out</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-3);">three parallel tracks, one join</div>
+        </div>
+        <div class="concurrent-grid">
+          <div class="mini-phase">
+            <div class="mini-title">Git themes</div>
+            <div class="mini-id">diff-reviewer · sonnet</div>
+            <div class="mini-desc">Runs when a base ref is declared. Blast radius + regression checks on diffs. Skipped cleanly when no base ref.</div>
+            <div class="tag-row">
+              <span class="tag skill">differential-review</span>
+            </div>
+          </div>
+          <div class="mini-phase">
+            <div class="mini-title">Input discovery</div>
+            <div class="mini-id">input-discoverer · sonnet</div>
+            <div class="mini-desc">First-pass source discovery via semgrep, then code-grounded reasoning to prune false positives.</div>
+            <div class="tag-row">
+              <span class="tag skill">semgrep</span>
+              <span class="tag advisor">+ advisor</span>
+            </div>
+            <div class="advisor-callout">
+              <div class="hd">input-discovery-advisor · sonnet</div>
+              Critiques the source list before it becomes input to phase 04. One bounded rerun allowed.
+            </div>
+          </div>
+          <div class="mini-phase">
+            <div class="mini-title">Arch-doc ingest</div>
+            <div class="mini-id">arch-ingester · sonnet</div>
+            <div class="mini-desc">Extract stated assets, actors, trust boundaries, and deployment facts from design docs.</div>
+            <div class="tag-row">
+              <span class="tag">executor</span>
+              <span class="tag">docs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 4 -->
+    <div class="phase fanout has-advisor">
+      <div class="phase-marker">
+        <div class="idx">04</div>
+        <div class="node"></div>
+      </div>
+      <div class="phase-body">
+        <div>
+          <div class="phase-title">Taint trace</div>
+          <div class="phase-id">taint-tracer · sonnet · fan-out per source</div>
+          <div class="phase-desc">Each discovered source gets traced to its terminal sink. Scanners decide applicability; manual, code-grounded tracing fills the gaps. No scanner evidence is ever fabricated.</div>
+        </div>
+        <div class="phase-meta">
+          <div class="tag-row">
+            <span class="tag fan">fan-out ×N sources</span>
+            <span class="tag skill">semgrep</span>
+            <span class="tag skill">codeql</span>
+            <span class="tag skill">sarif-parsing</span>
+          </div>
+          <div class="advisor-callout">
+            <div class="hd">taint-trace-advisor · opus-4-7</div>
+            Catches missed hops, ungrounded claims, duplicate paths, impossible flows, unreachable terminal sinks.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 5 -->
+    <div class="phase">
+      <div class="phase-marker">
+        <div class="idx">05</div>
+        <div class="node"></div>
+      </div>
+      <div class="phase-body">
+        <div>
+          <div class="phase-title">Asset · Actor · Boundary</div>
+          <div class="phase-id">boundary-modeler · sonnet</div>
+          <div class="phase-desc">Unify evidence from phases 02–03 into a single components / assets / actors / boundaries model. This is the map the threat-enumerator fans out over.</div>
+        </div>
+        <div class="phase-meta">
+          <div class="tag-row">
+            <span class="tag">executor</span>
+            <span class="tag">synthesis</span>
+          </div>
+          <div class="artifact"><span class="lbl">out</span>phases/05-asset-actor-boundary/model.json</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 6 -->
+    <div class="phase fanout has-advisor">
+      <div class="phase-marker">
+        <div class="idx">06</div>
+        <div class="node"></div>
+      </div>
+      <div class="phase-body">
+        <div>
+          <div class="phase-title">Threat enumeration</div>
+          <div class="phase-id">threat-enumerator · sonnet · fan-out per component</div>
+          <div class="phase-desc">One enumerator per component, producing concrete source-to-sink threats. No STRIDE, no taxonomy — judgment over categories. Every candidate cites <span class="mono">path:line-line</span> or the schema rejects it.</div>
+        </div>
+        <div class="phase-meta">
+          <div class="tag-row">
+            <span class="tag fan">fan-out ×N components</span>
+            <span class="tag">schema-validated</span>
+          </div>
+          <div class="advisor-callout">
+            <div class="hd">threat-enumeration-advisor · opus-4-7</div>
+            Reviews candidate threats component-by-component. Bounded reruns only where precise correction is needed.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 7 -->
+    <div class="phase has-advisor">
+      <div class="phase-marker">
+        <div class="idx">07</div>
+        <div class="node"></div>
+      </div>
+      <div class="phase-body">
+        <div>
+          <div class="phase-title">Prioritize</div>
+          <div class="phase-id">prioritizer · opus-4-7 · advisor-shaped</div>
+          <div class="phase-desc">A single advisor-shaped phase. Reads the full threat list and assigns <span class="mono">priority</span> + <span class="mono">priority_rationale</span> in one pass. Reachability is a dominant input signal.</div>
+        </div>
+        <div class="phase-meta">
+          <div class="tag-row">
+            <span class="tag advisor">advisor-shaped</span>
+            <span class="tag">reachability-weighted</span>
+          </div>
+          <div class="artifact"><span class="lbl">out</span>threats.json &nbsp;·&nbsp; threats/&lt;id&gt;.json</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 8 -->
+    <div class="phase">
+      <div class="phase-marker">
+        <div class="idx">08</div>
+        <div class="node"></div>
+      </div>
+      <div class="phase-body">
+        <div>
+          <div class="phase-title">Report</div>
+          <div class="phase-id">reporter · sonnet</div>
+          <div class="phase-desc">Narrative <span class="mono">report.md</span> wrapping the prioritized threats — asset table, actor table, trust boundaries, key risk themes. The artifact humans read; <span class="mono">threats.json</span> is the artifact tools read.</div>
+        </div>
+        <div class="phase-meta">
+          <div class="tag-row">
+            <span class="tag">executor</span>
+            <span class="tag">narrative</span>
+          </div>
+          <div class="artifact"><span class="lbl">out</span>report.md</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ EXECUTOR / ADVISOR ============ -->
+  <div class="section-head">
+    <h2>The executor / advisor pattern</h2>
+    <div class="rule"></div>
+  </div>
+
+  <section class="eadiagram">
+    <div>
+      <h3>One shot to disagree. One shot to revise.</h3>
+      <p class="ea-narrative">Most phases run a single executor. Advisors attach only where judgment errors are expensive and easy to miss. The pipeline allows at most <b>one</b> executor rerun per advised phase — so a disagreeing advisor cannot loop the phase indefinitely.</p>
+      <ol class="ea-list">
+        <li><span class="n">01</span><span><b>Executor</b> runs with tools, produces an artifact.</span></li>
+        <li><span class="n">02</span><span><b>Advisor</b> reads the artifact plus curated phase context. It has <em>no tools.</em></span></li>
+        <li><span class="n">03</span><span>Advisor writes <span class="mono">critique.md</span> and structured <span class="mono">revision_requests.json</span> — every time, even when the verdict is "looks fine."</span></li>
+        <li><span class="n">04</span><span>If and only if requests exist, the executor reruns <b>once</b> with <span class="mono">previousArtifact</span> + <span class="mono">revisionRequest</span> folded into context.</span></li>
+      </ol>
+      <p class="ea-narrative" style="margin-top:16px;">Advisors are paid to disagree, so they get the bigger model: <span class="mono">opus-4-7</span> for taint-trace, threat-enumeration, and prioritize. Executors run on <span class="mono">sonnet-4-6</span>, the mechanical ingester on <span class="mono">haiku-4-5</span>.</p>
+    </div>
+    <div class="ea-viz">
+      <svg viewBox="0 0 520 420" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#1a1814"/>
+          </marker>
+          <marker id="arrAcc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#a0522a"/>
+          </marker>
+        </defs>
+
+        <!-- Phase context -->
+        <rect x="30" y="20" width="170" height="58" fill="#faf6ee" stroke="#1a1814" stroke-width="1"/>
+        <text x="115" y="42" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#807866" letter-spacing="1.5">PHASE CONTEXT</text>
+        <text x="115" y="62" text-anchor="middle" font-family="Fraunces" font-size="14" fill="#1a1814">audit · git · inputs</text>
+
+        <!-- Executor box -->
+        <rect x="320" y="20" width="170" height="90" fill="#1a1814" stroke="#1a1814" stroke-width="1"/>
+        <text x="405" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#a0a090" letter-spacing="1.5">EXECUTOR</text>
+        <text x="405" y="68" text-anchor="middle" font-family="Fraunces" font-size="18" fill="#faf6ee">taint-tracer</text>
+        <text x="405" y="90" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#a0a090">sonnet · + skills</text>
+
+        <!-- Artifact -->
+        <rect x="320" y="150" width="170" height="50" fill="#ebe4d6" stroke="#1a1814" stroke-width="1"/>
+        <text x="405" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#807866" letter-spacing="1.5">ARTIFACT</text>
+        <text x="405" y="190" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#1a1814">taint_trace.json</text>
+
+        <!-- Advisor -->
+        <rect x="30" y="240" width="170" height="90" fill="none" stroke="#4a6790" stroke-width="1.5"/>
+        <text x="115" y="264" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a6790" letter-spacing="1.5">ADVISOR · NO TOOLS</text>
+        <text x="115" y="288" text-anchor="middle" font-family="Fraunces" font-size="18" fill="#1a1814">taint-trace-advisor</text>
+        <text x="115" y="310" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a6790">opus-4-7</text>
+
+        <!-- Critique output -->
+        <rect x="30" y="360" width="170" height="44" fill="#faf6ee" stroke="#4a6790" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="115" y="382" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a6790">critique.md</text>
+        <text x="115" y="396" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a6790">revision_requests.json</text>
+
+        <!-- Arrows -->
+        <!-- context -> executor -->
+        <line x1="200" y1="49" x2="318" y2="65" stroke="#1a1814" stroke-width="1" marker-end="url(#arr)"/>
+        <!-- executor -> artifact -->
+        <line x1="405" y1="111" x2="405" y2="148" stroke="#1a1814" stroke-width="1" marker-end="url(#arr)"/>
+        <!-- artifact -> advisor (down-left) -->
+        <path d="M 320 175 Q 240 175 200 280" fill="none" stroke="#4a6790" stroke-width="1" marker-end="url(#arr)"/>
+        <!-- advisor -> critique -->
+        <line x1="115" y1="330" x2="115" y2="358" stroke="#4a6790" stroke-width="1" marker-end="url(#arr)"/>
+        <!-- revision loop back to executor: go DOWN from critique, RIGHT along the bottom, UP the right side, then LEFT into executor — avoids the artifact -->
+        <path d="M 200 382 L 505 382 L 505 65 L 492 65" fill="none" stroke="#a0522a" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrAcc)"/>
+        <text x="300" y="376" font-family="JetBrains Mono" font-size="9.5" fill="#a0522a" letter-spacing="1">1× RERUN MAX</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <div class="section-head">
+    <h2>Run · LegalCaseFlow (deliberately vulnerable)</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="results">
+    <div>
+      <div class="counts">
+        <div class="count-card critical">
+          <div class="bar"></div>
+          <div class="lbl">Critical</div>
+          <div class="num">12</div>
+          <div class="unit">threats</div>
+        </div>
+        <div class="count-card high">
+          <div class="bar"></div>
+          <div class="lbl">High</div>
+          <div class="num">27</div>
+          <div class="unit">threats</div>
+        </div>
+        <div class="count-card medium">
+          <div class="bar"></div>
+          <div class="lbl">Medium</div>
+          <div class="num">24</div>
+          <div class="unit">threats</div>
+        </div>
+        <div class="count-card low">
+          <div class="bar"></div>
+          <div class="lbl">Low</div>
+          <div class="num">1</div>
+          <div class="unit">threats</div>
+        </div>
+      </div>
+
+      <div class="totals">
+        <div class="t">
+          <div class="k">Total threats</div>
+          <div class="v">64</div>
+        </div>
+        <div class="t">
+          <div class="k">Fan-out · sources</div>
+          <div class="v">59</div>
+        </div>
+        <div class="t">
+          <div class="k">Fan-out · components</div>
+          <div class="v">19</div>
+        </div>
+        <div class="t">
+          <div class="k">Tokens · in / out</div>
+          <div class="v">137K<span class="unit">/</span>680K</div>
+        </div>
+      </div>
+
+      <div class="themes">
+        <div class="theme">
+          <div class="t">Unauthenticated JWT signing-key disclosure</div>
+          <div class="d"><span class="mono">GET /startup-metadata</span> returns <span class="mono">auth_secret_key</span> to any internet caller. Three distinct threats reached the sink from different angles.</div>
+          <div class="trace">internet → express → system_settings</div>
+        </div>
+        <div class="theme">
+          <div class="t">SQL injection at login</div>
+          <div class="d"><span class="mono">POST /auth/login</span> interpolates <span class="mono">email</span> directly into a WHERE clause. Unauthenticated bypass + full cross-tenant read.</div>
+          <div class="trace">internet → express → postgres (no RLS)</div>
+        </div>
+        <div class="theme">
+          <div class="t">Password reset token leaked in response body</div>
+          <div class="d">Two unauthenticated requests suffice to take over any account with a known email — including admins.</div>
+          <div class="trace">anon → /auth/reset → response body</div>
+        </div>
+        <div class="theme">
+          <div class="t">Host-exposed PostgreSQL</div>
+          <div class="d">Docker Compose maps 5432 to the host with hardcoded <span class="mono">legalcf/legalcf</span> credentials. Bypasses all application-layer controls.</div>
+          <div class="trace">host:5432 → postgres (direct)</div>
+        </div>
+      </div>
+    </div>
+
+    <aside>
+      <div class="threat-card">
+        <span class="pri">priority · critical</span>
+        <h4>Login endpoint interpolates email directly into SQL WHERE clause</h4>
+        <div class="row">
+          <div class="k">id</div>
+          <div class="v mono">T-sql-injection-at-login-via-unparameterized-email</div>
+        </div>
+        <div class="row">
+          <div class="k">component</div>
+          <div class="v">Express REST API (apps/api)</div>
+        </div>
+        <div class="row">
+          <div class="k">entry</div>
+          <div class="v mono">POST /auth/login</div>
+        </div>
+        <div class="row">
+          <div class="k">boundary</div>
+          <div class="v">Internet → Express REST API → PostgreSQL</div>
+        </div>
+        <div class="row">
+          <div class="k">reach</div>
+          <div class="v mono">internet</div>
+        </div>
+        <div class="row">
+          <div class="k">evidence</div>
+          <div class="v mono">apps/api/src/services/auth.service.ts:165-190</div>
+        </div>
+        <div class="row">
+          <div class="k">rationale</div>
+          <div class="v">Internet-reachable, unauthenticated, direct path to full credential dump.</div>
+        </div>
+        <div class="row">
+          <div class="k">confidence</div>
+          <div class="v mono">high</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-3);letter-spacing:0.1em;text-transform:uppercase;">one record · exactly as it landed in threats.json</div>
+    </aside>
+  </div>
+
+  <!-- ============ LOOP ============ -->
+  <section class="loop">
+    <h3>Where Argus sits in the loop</h3>
+    <div class="sub">Offensive-to-defensive loop, wired as agentic stages — not a twice-a-year calendar item.</div>
+    <div class="loop-chain">
+      <div class="loop-node active">
+        <div class="step">Stage 01 · You are here</div>
+        <div class="name">Argus</div>
+        <div class="role">Threat-model the target. Produce prioritized backlog.</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-node">
+        <div class="step">Stage 02</div>
+        <div class="name">Odysseus</div>
+        <div class="role">Run the pentest against the prioritized backlog.</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-node">
+        <div class="step">Stage 03</div>
+        <div class="name">Human builder</div>
+        <div class="role">Fix the issues the exploits surfaced. Still a human today.</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-node">
+        <div class="step">Stage 04</div>
+        <div class="name">Cassian</div>
+        <div class="role">Differential review of the remediation PR — fix closed, no regressions.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COLOPHON ============ -->
+  <div class="colophon">
+    <div>Argus · built on Cerbero · Claude Agent SDK · Trail of Bits skills</div>
+    <div class="disclaimer">Educational / authorized testing only. Only use these techniques against systems you own or have explicit permission to assess. For production or team builds, switch to the Claude API directly.</div>
+  </div>
+
+</div>
+</body>
+</html>
